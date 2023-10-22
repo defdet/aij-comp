@@ -3,7 +3,6 @@ import sys, os
 def install():
     subprocess.check_call([sys.executable, "-m", "pip", "install", "librosa", "--no-index", "--find-links", f"{os.getcwd()}/packages/librosa"])
     subprocess.check_call([sys.executable, "-m", "pip", "install", 'transformers', '--no-index', '--find-links', 'packages/transformers'])
-install()
 import torch, transformers
 from transformers import IdeficsForVisionText2Text, AutoProcessor
 from configs import WhisperForAudioCaptioning
@@ -38,11 +37,12 @@ def generate_text(model, tokenizer, cur_query_list, history_list=None):
 
 def get_ppl(model, tokenizer, cur_query_tuple, history=None):
     history = "" if history is None else history
-    cur_query_list = cur_query_tuple[0]
+    cur_query_list, text = cur_query_tuple
     model_idefics, model_caption = model
     processor_idefics, caption_feature_extractor, tokenizer_whisper = tokenizer
     prompt = format_replic(cur_query_list, model_caption, tokenizer_whisper, caption_feature_extractor, True)
     for data in prompt:
-        history += data
-    ppl = get_perp_of_text(history)
+        history += ''.join(data)
+    history += text
+    ppl = get_perp_of_text(history, model_idefics, processor_idefics)
     return ppl, history
