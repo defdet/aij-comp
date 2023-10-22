@@ -1,7 +1,8 @@
 import subprocess
-import sys
+import sys, os
 def install():
-    subprocess.check_call([sys.executable, "-m", "pip", "install", 'transformers', '--no-index', '--find-links', 'file:///packages/transformers'])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "librosa", "--no-index", "--find-links", f"{os.getcwd()}/packages/librosa"])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", 'transformers', '--no-index', '--find-links', 'packages/transformers'])
 install()
 import torch, transformers
 from transformers import IdeficsForVisionText2Text, AutoProcessor
@@ -9,8 +10,8 @@ from configs import WhisperForAudioCaptioning
 from utils import format_replic, get_text_ans, get_ans, get_perp_of_text
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-IDEFICS_DIR = "models\idefics-test"
-WHISPER_CAPTION_DIR = "models\captioning-whisper"
+IDEFICS_DIR = "HuggingFaceM4/tiny-random-idefics"
+WHISPER_CAPTION_DIR = "MU-NLPC/whisper-tiny-audio-captioning"
 def setup_model_and_tokenizer():
 
     model_idefics = IdeficsForVisionText2Text.from_pretrained(IDEFICS_DIR, torch_dtype=torch.bfloat16).to(device)
@@ -32,7 +33,7 @@ def generate_text(model, tokenizer, cur_query_list, history_list=None):
     for data in prompt:
         history_list[0].append(data)
     full_history = get_text_ans(history_list, model_idefics, processor_idefics)
-    answer = get_ans(history_list, full_history)
+    answer = get_ans(''.join(history_list[0]), full_history[0])
     return answer, history_list
 
 def get_ppl(model, tokenizer, cur_query_tuple, history=None):
