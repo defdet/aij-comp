@@ -1,11 +1,16 @@
+import subprocess
+import sys
+def install():
+    subprocess.check_call([sys.executable, "-m", "pip", "install", 'transformers', '--no-index', '--find-links', 'file:packages'])
+install()
 import torch, transformers
 from transformers import IdeficsForVisionText2Text, AutoProcessor
 from configs import WhisperForAudioCaptioning
-from utils import format_replic, get_text_ans, get_ans
+from utils import format_replic, get_text_ans, get_ans, get_perp_of_text
 
 IDEFICS_DIR = "models/idefics-9b-instruct"
 WHISPER_CAPTION_DIR = "models/whisper-caption"
-def setup_model_and_tokenizer():
+def setup_model_and_tokenizer():        
 
     model_idefics = IdeficsForVisionText2Text.from_pretrained(IDEFICS_DIR, torch_dtype=torch.bfloat16).cuda()
     processor_idefics = AutoProcessor.from_pretrained(IDEFICS_DIR)
@@ -15,14 +20,14 @@ def setup_model_and_tokenizer():
     model_caption.eval()
     model_idefics.eval()
 
-    return (model_idefics, model_caption), (processor_idefics, caption_feature_extractor)
+    return (model_idefics, model_caption), (processor_idefics, caption_feature_extractor, tokenizer)
 
 def generate_text(model, tokenizer, cur_query_list, history_list=None):
     no_space = False if history_list is None else True
-    history_list = [[]] if history_list is None else history_list[0]
+    history_list = [[]] if history_list is None else history_list
     model_idefics, model_caption = model
-    processor_idefics, caption_feature_extractor = tokenizer
-    prompt = format_replic(cur_query_list, model_caption, tokenizer, no_space)
+    processor_idefics, caption_feature_extractor, tokenizer_whisper = tokenizer
+    prompt = format_replic(cur_query_list, model_caption, tokenizer_whisper, caption_feature_extractor, no_space)
     for data in prompt:
         history_list[0].append(data)
     full_history = get_text_ans(history_list, model_idefics, processor_idefics)
@@ -30,5 +35,12 @@ def generate_text(model, tokenizer, cur_query_list, history_list=None):
     return answer, history_list
 
 def get_ppl(model, tokenizer, cur_query_tuple, history=None):
-    ppl = 0
-    return ppl
+    history = "" if history is None else history
+    cur_query_list = cur_query_tuple[0]
+    model_idefics, model_caption = model
+    processor_idefics, caption_feature_extractor, tokenizer_whisper = tokenizer
+    prompt = format_replic(cur_query_list, model_caption, tokenizer_whisper, caption_feature_extractor, True)
+    for data in prompt:
+        history += data
+    ppl = get_perp_of_text(history)
+    return ppl, history
