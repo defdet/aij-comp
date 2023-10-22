@@ -1,20 +1,21 @@
 import subprocess
 import sys
 def install():
-    subprocess.check_call([sys.executable, "-m", "pip", "install", 'transformers', '--no-index', '--find-links', 'file:packages'])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", 'transformers', '--no-index', '--find-links', 'file:///packages/transformers'])
 install()
 import torch, transformers
 from transformers import IdeficsForVisionText2Text, AutoProcessor
 from configs import WhisperForAudioCaptioning
 from utils import format_replic, get_text_ans, get_ans, get_perp_of_text
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-IDEFICS_DIR = "models/idefics-9b-instruct"
-WHISPER_CAPTION_DIR = "models/whisper-caption"
-def setup_model_and_tokenizer():        
+IDEFICS_DIR = "models\idefics-test"
+WHISPER_CAPTION_DIR = "models\captioning-whisper"
+def setup_model_and_tokenizer():
 
-    model_idefics = IdeficsForVisionText2Text.from_pretrained(IDEFICS_DIR, torch_dtype=torch.bfloat16).cuda()
+    model_idefics = IdeficsForVisionText2Text.from_pretrained(IDEFICS_DIR, torch_dtype=torch.bfloat16).to(device)
     processor_idefics = AutoProcessor.from_pretrained(IDEFICS_DIR)
-    model_caption = WhisperForAudioCaptioning.from_pretrained(WHISPER_CAPTION_DIR).cuda()
+    model_caption = WhisperForAudioCaptioning.from_pretrained(WHISPER_CAPTION_DIR).to(device)
     tokenizer = transformers.WhisperTokenizer.from_pretrained(WHISPER_CAPTION_DIR, language="en", task="transcribe")
     caption_feature_extractor = transformers.WhisperFeatureExtractor.from_pretrained(WHISPER_CAPTION_DIR)
     model_caption.eval()
